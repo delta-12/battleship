@@ -74,6 +74,18 @@ void initializeShips(player *p)
     p->patrolBoat.isPlaced = false;
 
     // place ships to right of player board
+    // p->carrier.pos[0] = &p->playerGrid[11][1];
+    // p->cruiser.pos[0] = &p->playerGrid[11][3];
+    // p->destroyer.pos[0] = &p->playerGrid[11][5];
+    // p->submarine.pos[0] = &p->playerGrid[11][7];
+    // p->patrolBoat.pos[0] = &p->playerGrid[11][9];
+
+    // placeShip(&p->carrier);
+    // placeShip(&p->cruiser);
+    // placeShip(&p->destroyer);
+    // placeShip(&p->submarine);
+    // placeShip(&p->patrolBoat);
+
     for (int i = 0; i < p->carrier.len; i++)
     {
         p->playerGrid[11 + i][1] = 1;
@@ -131,19 +143,22 @@ void rotateShip(ship *s)
 {
     SDL_Event event = getKeypress(FPS);
     if (event.key.keysym.scancode == SDL_SCANCODE_LEFT)
-        s->rot += (s->rot + 1) % 4;
+        s->rot = (s->rot + 3) % 4;
     if (event.key.keysym.scancode == SDL_SCANCODE_RIGHT)
-        s->rot += (s->rot + 3) % 4;
-    // update window
+        s->rot = (s->rot + 1) % 4;
 }
 
-void placeShip(ship *s, int *startingPos)
+int placeShip(ship *s)
 {
     int rot;
+    int *startingPos = s->pos[s->len / 2];
     switch (s->rot)
     {
+    case 0:
+        rot = 17;
+        break;
     case 2:
-        rot = -0.1;
+        rot = -17;
         break;
     case 3:
         rot = -1;
@@ -152,11 +167,26 @@ void placeShip(ship *s, int *startingPos)
         rot = s->rot;
         break;
     }
+    // check if cells are occupied
     for (int i = 0; i < s->len; i++)
     {
-        s->pos[i] = startingPos + (i * 10 * rot);
-        *s->pos[i] = 1;
+        if (s->pos[i] != startingPos && *(startingPos - (((s->len / 2) - i) * rot)) == 1)
+        {
+            printf("Can't place ship!\n");
+            return 1;
+        }
     }
+    // place ship w/ rotation
+    for (int i = 0; i < s->len; i++)
+    {
+        if (s->pos[i] != startingPos)
+        {
+            *s->pos[i] = 0;
+            s->pos[i] = startingPos - (((s->len / 2) - i) * rot);
+            *s->pos[i] = 1;
+        }
+    }
+    return 0;
 }
 
 void takeShot()
@@ -165,13 +195,22 @@ void takeShot()
     // space to fire, c to clear
 }
 
+void render(SDL_Renderer *renderer, player *p)
+{
+    SDL_Color gridBackground = {22, 22, 22, 255}; // Barely Black
+    SDL_Color gridLineColor = {44, 44, 44, 255};  // Dark grey
+
+    drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
+    drawGrid(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
+    drawPlayerShips(renderer, p);
+    SDL_RenderPresent(renderer);
+    SDL_RenderClear(renderer);
+}
+
 int main()
 {
     SDL_Window *window;
     player p1, p2;
-
-    SDL_Color gridBackground = {22, 22, 22, 255}; // Barely Black
-    SDL_Color gridLineColor = {44, 44, 44, 255};  // Dark grey
 
     initializeBoards(&p1);
     initializeBoards(&p2);
@@ -180,10 +219,15 @@ int main()
     initializeShips(&p2);
 
     SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE + 1, CELL_SIZE * BOARD_SIZE + 1);
-    drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
-    drawGrid(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
-    drawPlayerShips(renderer, &p1);
-    SDL_RenderPresent(renderer);
+
+    render(renderer, &p1);
+
+    while (1)
+    {
+        rotateShip(&p1.patrolBoat);
+        placeShip(&p1.patrolBoat);
+        render(renderer, &p1);
+    }
 
     SDL_Delay(10000);
 
