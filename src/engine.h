@@ -7,7 +7,7 @@ SDL_Renderer *initializeSDL(SDL_Window *window, const char *title, int width, in
 
 void teardown(SDL_Renderer *renderer, SDL_Window *window);
 
-SDL_Event getKeypress(int fps);
+SDL_Event getInput();
 
 void drawBackground(SDL_Renderer *renderer, int r, int g, int b, int a);
 

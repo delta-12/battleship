@@ -46,21 +46,12 @@ void teardown(SDL_Renderer *renderer, SDL_Window *window)
     SDL_Quit();
 }
 
-SDL_Event getKeypress(int fps)
+SDL_Event getInput()
 {
     SDL_Event event;
 
-    while (1)
-    {
-        while (SDL_PollEvent(&event))
-        {
-            if (event.type == SDL_KEYDOWN)
-            {
-                return event;
-            }
-        }
-        SDL_Delay(1000 / fps);
-    }
+    while (SDL_PollEvent(&event))
+        return event;
 }
 
 void drawBackground(SDL_Renderer *renderer, int r, int g, int b, int a)
