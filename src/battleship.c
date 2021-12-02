@@ -22,7 +22,7 @@ typedef struct
 {
     int *pos[5];
     int len, rot; // rotation- 0 left, 1 up, 2 right, 3 down
-    bool isPlaced;
+    int *initCenterPos;
 } ship;
 
 typedef struct
@@ -37,7 +37,7 @@ typedef struct
 } player;
 
 /* Initialization
-====================================================================*/
+*********************************************************************/
 void initializeBoards(player *p)
 {
     // zero out grids
@@ -68,8 +68,7 @@ void initializeShips(player *p)
 
     for (int i = 0; i < NSHIPS; i++)
     {
-        p->ships[i].rot = 0;          // initial orientation up
-        p->ships[i].isPlaced = false; // ships not placed on board yet
+        p->ships[i].rot = 0; // initial orientation left
 
         // place ships to right of player board
         for (int j = 0; j < p->ships[i].len; j++)
@@ -77,14 +76,16 @@ void initializeShips(player *p)
             p->playerGrid[11 + j][i * 2 + 1] = 1;
             p->ships[i].pos[j] = &p->playerGrid[11 + j][i * 2 + 1];
         }
+
+        p->ships[i].initCenterPos = p->ships[i].pos[p->ships[i].len / 2]; // initial position of ship's center
     }
 
     p->selectedShip = -1; // no ship selected yet
 }
-/*==================================================================*/
+/********************************************************************/
 
 /* Game Logic
-====================================================================*/
+*********************************************************************/
 //return offset corresponding to rotation
 int getRotation(int rotation)
 {
@@ -189,14 +190,30 @@ void takeShot()
     // space to fire, c to clear
 }
 
+// move selected ship to initial position, right of the board
+void clearSelectedShip(player *p)
+{
+    ship *s = &p->ships[p->selectedShip];
+    int shipCenter = s->len / 2;
+    for (int i = 0; i < s->len; i++)
+    {
+        *s->pos[i] = 0;
+    }
+    s->rot = 0;
+    s->pos[shipCenter] = s->initCenterPos;
+    *s->pos[shipCenter] = 1;
+}
+
 // check that ship can be selected
 int setSelectedShip(bool started, player *p, int selectedShip)
 {
     int x, y = 13;
 
-    // check that game has not stated and another ship is not selected
-    if (!started && p->selectedShip == -1)
+    // check that game has not started and another ship is not selected
+    if (!started)
     {
+        if (p->selectedShip != -1)
+            clearSelectedShip(p);
         // verify that cells where selected ship is placed are not occupied
         x = 2 + (p->ships[p->selectedShip].len / 2);
         if (checkCells(p, &x, &y, &p->ships[p->selectedShip].rot))
@@ -258,10 +275,10 @@ void updateGame(bool *running, bool *started, player *p1, player *p2)
     placeShips(p1);
     // deselect selected ship
 }
-/*==================================================================*/
+/********************************************************************/
 
 /* Render Game
-====================================================================*/
+*********************************************************************/
 void drawGrid(SDL_Renderer *renderer, int r, int g, int b, int a)
 {
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
@@ -301,7 +318,7 @@ void render(SDL_Renderer *renderer, player *p1, player *p2)
     SDL_RenderPresent(renderer);
     SDL_RenderClear(renderer);
 }
-//*==================================================================*/
+/********************************************************************/
 
 int main()
 {
