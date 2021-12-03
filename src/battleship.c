@@ -1,20 +1,14 @@
-
-// initialize window
-// draw grid
-// matrix 0 or 1
-// place pieces
-// after a hit, check pointer array for ship sank
-
 #include <stdio.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include "engine.h"
+#include <time.h>
 
 #define BOARD_SIZE 17
 #define CELL_SIZE 36
 #define NSHIPS 5
 
-#define FPS 25
+#define FPS 100
 #define SKIP_TICKS 1000 / FPS
 
 // general ship struct
@@ -372,6 +366,8 @@ int main()
 {
     SDL_Window *window = NULL;
     player p1, p2;
+    clock_t start, end;
+    double sleepTime;
     bool running = true, started = false;
 
     initializeBoards(&p1);
@@ -386,18 +382,18 @@ int main()
 
     while (running)
     {
+        start = clock();
         updateGame(&running, &started, &p1, &p2);
         render(renderer, &p1, &p2);
+        end = clock();
 
-        SDL_Delay(SKIP_TICKS); // need to calculate delay instead of fixed delay
+        sleepTime = SKIP_TICKS - ((double)(end - start) / CLOCKS_PER_SEC);
+        (sleepTime >= 0) ? SDL_Delay(sleepTime) : printf("Running %lfs behind!\n", -1 * sleepTime); // need to calculate delay instead of fixed delay, adjust FPS
     }
 
+    // ship can't be placed outside of board
     // need to add extra row or column to each side, draw boundaries
-    // check the check cells function, should test if rotation is NULL?
-
-    // players place ships
-    // coord == 1
-    // store position pointers in ship pointer arrays
+    // box selection area
     // keep track of player's hits and misses in opponent grid
     // keep track of enemy hits in player grid
     // 1 = ship present
