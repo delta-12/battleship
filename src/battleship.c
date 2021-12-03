@@ -23,6 +23,8 @@ typedef struct
     int *pos[5];
     int len, rot; // rotation- 0 left, 1 up, 2 right, 3 down
     int *initCenterPos;
+    int center;
+    bool isPlaced;
 } ship;
 
 typedef struct
@@ -69,6 +71,8 @@ void initializeShips(player *p)
     for (int i = 0; i < NSHIPS; i++)
     {
         p->ships[i].rot = 0; // initial orientation left
+        p->ships[i].isPlaced = false;
+        p->ships[i].center = p->ships[i].len / 2; // calculate ship's center point
 
         // place ships to right of player board
         for (int j = 0; j < p->ships[i].len; j++)
@@ -106,15 +110,18 @@ int getRotation(int rotation)
 bool checkCells(player *p, int *x, int *y, int *rotation)
 {
     ship *s = &p->ships[p->selectedShip];
-    int rot, shipCenter = s->len / 2;
+    int rot, *newCenter = s->pos[s->center];
 
     // check if center point can be moved
     if (x != NULL && y != NULL)
-        if (p->playerGrid[*x][*y] == 1 && s->pos[shipCenter] != &p->playerGrid[*x][*y])
+    {
+        if (p->playerGrid[*x][*y] == 1 && s->pos[s->center] != &p->playerGrid[*x][*y])
         {
-            printf("Can't place ship!\n");
+            printf("Can't place center!\n");
             return false;
         }
+        newCenter = &p->playerGrid[*x][*y];
+    }
 
     // apply rotation if necessary
     if (rotation != NULL)
@@ -125,7 +132,7 @@ bool checkCells(player *p, int *x, int *y, int *rotation)
     // check if rest of ship can be moved
     for (int i = 0; i < s->len; i++)
     {
-        if (s->pos[i] != s->pos[shipCenter] && *(s->pos[shipCenter] - (((s->len / 2) - i) * rot)) == 1)
+        if (s->pos[i] != newCenter && *(newCenter - ((s->center - i) * rot)) == 1)
         {
             printf("Can't place ship!\n");
             return false;
@@ -153,20 +160,11 @@ void rotateShip(player *p, int rotation)
 void placeShips(player *p)
 {
     ship *s;
-    int rot, shipCenter;
+    int rot;
 
     for (int i = 0; i < NSHIPS; i++)
     {
         s = &p->ships[i];
-        shipCenter = s->len / 2;
-
-        // move center point to where selected ship is placed
-        if (p->selectedShip == i)
-        {
-            *s->pos[shipCenter] = 0;
-            s->pos[shipCenter] = &p->playerGrid[2 + (s->len / 2)][13];
-            *s->pos[shipCenter] = 1;
-        }
 
         // apply rotation
         rot = getRotation(s->rot);
@@ -174,12 +172,14 @@ void placeShips(player *p)
         // place ship w/ rotation
         for (int j = 0; j < s->len; j++)
         {
-            if (s->pos[j] != s->pos[shipCenter])
+            if (s->pos[j] == s->pos[s->center])
             {
-                *s->pos[j] = 0;
-                s->pos[j] = s->pos[shipCenter] - (((s->len / 2) - j) * rot);
-                *s->pos[j] = 1;
+                *s->pos[s->center] = 1;
+                continue;
             }
+            *s->pos[j] = 0;
+            s->pos[j] = s->pos[s->center] - ((s->center - j) * rot);
+            *s->pos[j] = 1;
         }
     }
 }
@@ -194,31 +194,54 @@ void takeShot()
 void clearSelectedShip(player *p)
 {
     ship *s = &p->ships[p->selectedShip];
-    int shipCenter = s->len / 2;
     for (int i = 0; i < s->len; i++)
     {
         *s->pos[i] = 0;
     }
     s->rot = 0;
-    s->pos[shipCenter] = s->initCenterPos;
-    *s->pos[shipCenter] = 1;
+    s->pos[s->center] = s->initCenterPos;
+}
+
+int placeSelectedShip(player *p, int x, int y)
+{
+    ship *s;
+    if (p->selectedShip != -1)
+    {
+        s = &p->ships[p->selectedShip];
+        if (x < 10 && y < 10)
+            if (checkCells(p, &x, &y, NULL))
+            {
+                *s->pos[s->center] = 0;
+                s->pos[s->center] = &p->playerGrid[x][y];
+                s->isPlaced = true;
+                return 0;
+            }
+    }
+    printf("Can't place selected ship!\n");
+    return 1;
 }
 
 // check that ship can be selected
 int setSelectedShip(bool started, player *p, int selectedShip)
 {
+    ship *s;
     int x, y = 13;
 
     // check that game has not started and another ship is not selected
     if (!started)
     {
+        // preserve placement if previously selected ship was placed
         if (p->selectedShip != -1)
-            clearSelectedShip(p);
+            (p->ships[p->selectedShip].isPlaced) ? p->selectedShip = -1 : clearSelectedShip(p);
         // verify that cells where selected ship is placed are not occupied
-        x = 2 + (p->ships[p->selectedShip].len / 2);
+        x = 2 + (p->ships[p->selectedShip].center);
         if (checkCells(p, &x, &y, &p->ships[p->selectedShip].rot))
         {
             p->selectedShip = selectedShip;
+            s = &p->ships[p->selectedShip];
+            s->isPlaced = false;
+            *s->pos[s->center] = 0;
+            s->pos[s->center] = &p->playerGrid[11 + (s->center)][y];
             return 0;
         }
     }
@@ -262,7 +285,11 @@ void handleInput(bool *running, bool started, player *p)
         default:
             break;
         }
-    // add mouse events for placing ships and taking shots
+        break;
+    case SDL_MOUSEBUTTONDOWN:
+        placeSelectedShip(p, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE);
+        // add mouse events for placing ships and taking shots
+        break;
     default:
         break;
     }
@@ -273,7 +300,6 @@ void updateGame(bool *running, bool *started, player *p1, player *p2)
 {
     handleInput(running, *started, p1);
     placeShips(p1);
-    // deselect selected ship
 }
 /********************************************************************/
 
