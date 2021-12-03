@@ -216,9 +216,10 @@ int placeSelectedShip(player *p, int x, int y)
                 s->isPlaced = true;
                 return 0;
             }
+        printf("Can't place selected ship!\n");
+        return 1;
     }
-    printf("Can't place selected ship!\n");
-    return 1;
+    return 0;
 }
 
 // check that ship can be selected
@@ -249,8 +250,26 @@ int setSelectedShip(bool started, player *p, int selectedShip)
     return 1;
 }
 
+// start game if all ships are placed on board
+int startGame(player *p, bool *started)
+{
+    *started = true;
+    for (int i = 0; i < NSHIPS; i++)
+    {
+        if (!p->ships[i].isPlaced)
+        {
+            *started = false;
+            printf("Place all ships to start game!\n");
+            return 1;
+        }
+    }
+    p->selectedShip = -1;
+    printf("Game started!\n");
+    return 0;
+}
+
 // perform actions corresponding to user input
-void handleInput(bool *running, bool started, player *p)
+void handleInput(bool *running, bool *started, player *p)
 {
     SDL_Event event = getInput();
     switch (event.type)
@@ -262,25 +281,28 @@ void handleInput(bool *running, bool started, player *p)
         switch (event.key.keysym.scancode)
         {
         case SDL_SCANCODE_1:
-            setSelectedShip(started, p, 0);
+            setSelectedShip(*started, p, 0);
             break;
         case SDL_SCANCODE_2:
-            setSelectedShip(started, p, 1);
+            setSelectedShip(*started, p, 1);
             break;
         case SDL_SCANCODE_3:
-            setSelectedShip(started, p, 2);
+            setSelectedShip(*started, p, 2);
             break;
         case SDL_SCANCODE_4:
-            setSelectedShip(started, p, 3);
+            setSelectedShip(*started, p, 3);
             break;
         case SDL_SCANCODE_5:
-            setSelectedShip(started, p, 4);
+            setSelectedShip(*started, p, 4);
             break;
         case SDL_SCANCODE_LEFT:
             rotateShip(p, 3);
             break;
         case SDL_SCANCODE_RIGHT:
             rotateShip(p, 1);
+            break;
+        case SDL_SCANCODE_S:
+            startGame(p, started);
             break;
         default:
             break;
@@ -298,7 +320,7 @@ void handleInput(bool *running, bool started, player *p)
 // perform game logic
 void updateGame(bool *running, bool *started, player *p1, player *p2)
 {
-    handleInput(running, *started, p1);
+    handleInput(running, started, p1);
     placeShips(p1);
 }
 /********************************************************************/
