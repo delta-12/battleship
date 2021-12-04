@@ -101,10 +101,10 @@ int getRotation(int rotation)
 }
 
 // check if cells are occupied
-bool checkCells(player *p, int *x, int *y, int *rotation)
+bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
 {
     ship *s = &p->ships[p->selectedShip];
-    int rot, *newCenter = s->pos[s->center];
+    int rot, *newPos, newXPos, newYPos, *newCenter = s->pos[s->center];
 
     // check if center point can be moved
     if (x != NULL && y != NULL)
@@ -114,7 +114,7 @@ bool checkCells(player *p, int *x, int *y, int *rotation)
             printf("Can't place center!\n");
             return false;
         }
-        newCenter = &p->playerGrid[*x][*y];
+        newCenter = &p->playerGrid[*x][*y]; // if cell is clear, set new center equal to pointer to new cell
     }
 
     // apply rotation if necessary
@@ -126,7 +126,18 @@ bool checkCells(player *p, int *x, int *y, int *rotation)
     // check if rest of ship can be moved
     for (int i = 0; i < s->len; i++)
     {
-        if (s->pos[i] != newCenter && *(newCenter - ((s->center - i) * rot)) == 1)
+        newPos = newCenter - ((s->center - i) * rot);
+        if (placing)
+        {
+            newXPos = (newPos - &p->playerGrid[0][0]) / 17;
+            newYPos = (newPos - &p->playerGrid[0][0]) % 17;
+            if (newXPos > 9 || newYPos > 9)
+            {
+                printf("Can't place ship!\n");
+                return false;
+            }
+        }
+        if (s->pos[i] != newCenter && *newPos == 1)
         {
             printf("Can't place ship!\n");
             return false;
@@ -145,7 +156,7 @@ void rotateShip(player *p, int rotation)
     if (p->selectedShip != -1)
     {
         // check cells before applying rotation
-        if (checkCells(p, NULL, NULL, &rot))
+        if (checkCells(p, NULL, NULL, &rot, 0))
             p->ships[p->selectedShip].rot = rot;
     }
 }
@@ -172,7 +183,7 @@ void placeShips(player *p)
                 continue;
             }
             *s->pos[j] = 0;
-            s->pos[j] = s->pos[s->center] - ((s->center - j) * rot);
+            s->pos[j] = s->pos[s->center] - ((s->center - j) * rot); // calculate offset from center for each block
             *s->pos[j] = 1;
         }
     }
@@ -203,7 +214,7 @@ int placeSelectedShip(player *p, int x, int y)
     {
         s = &p->ships[p->selectedShip];
         if (x < 10 && y < 10)
-            if (checkCells(p, &x, &y, NULL))
+            if (checkCells(p, &x, &y, NULL, 1))
             {
                 *s->pos[s->center] = 0;
                 s->pos[s->center] = &p->playerGrid[x][y];
@@ -229,8 +240,8 @@ int setSelectedShip(bool started, player *p, int selectedShip)
         if (p->selectedShip != -1)
             (p->ships[p->selectedShip].isPlaced) ? p->selectedShip = -1 : clearSelectedShip(p);
         // verify that cells where selected ship is placed are not occupied
-        x = 2 + (p->ships[p->selectedShip].center);
-        if (checkCells(p, &x, &y, &p->ships[p->selectedShip].rot))
+        x = 2 + (p->ships[selectedShip].center);
+        if (checkCells(p, &x, &y, &p->ships[selectedShip].rot, 0))
         {
             p->selectedShip = selectedShip;
             s = &p->ships[p->selectedShip];
