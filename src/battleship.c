@@ -4,7 +4,7 @@
 #include "engine.h"
 #include <time.h>
 
-#define BOARD_SIZE 17
+#define BOARD_SIZE 19
 #define CELL_SIZE 36
 #define NSHIPS 5
 
@@ -25,7 +25,7 @@ typedef struct
 {
     // player's boards
     int playerGrid[BOARD_SIZE][BOARD_SIZE];
-    int opponentGrid[BOARD_SIZE - 7][BOARD_SIZE - 7];
+    int opponentGrid[BOARD_SIZE - 9][BOARD_SIZE - 9];
 
     // player's ships
     ship ships[NSHIPS];
@@ -42,7 +42,7 @@ void initializeBoards(player *p)
         for (int j = 0; j < BOARD_SIZE; j++)
         {
             p->playerGrid[i][j] = 0;
-            if (i < BOARD_SIZE - 7 && j < BOARD_SIZE - 7)
+            if (i < BOARD_SIZE - 8 && i > 0 && j < BOARD_SIZE - 8 && j > 0)
                 p->opponentGrid[i][j] = 0;
         }
     }
@@ -71,8 +71,8 @@ void initializeShips(player *p)
         // place ships to right of player board
         for (int j = 0; j < p->ships[i].len; j++)
         {
-            p->playerGrid[11 + j][i * 2 + 1] = 1;
-            p->ships[i].pos[j] = &p->playerGrid[11 + j][i * 2 + 1];
+            p->playerGrid[13 + j][i * 2 + 1] = 1;
+            p->ships[i].pos[j] = &p->playerGrid[13 + j][i * 2 + 1];
         }
 
         p->ships[i].initCenterPos = p->ships[i].pos[p->ships[i].len / 2]; // initial position of ship's center
@@ -90,9 +90,9 @@ int getRotation(int rotation)
     switch (rotation)
     {
     case 0:
-        return 17;
+        return 19;
     case 2:
-        return -17;
+        return -19;
     case 3:
         return -1;
     default:
@@ -129,9 +129,9 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
         newPos = newCenter - ((s->center - i) * rot);
         if (placing)
         {
-            newXPos = (newPos - &p->playerGrid[0][0]) / 17;
-            newYPos = (newPos - &p->playerGrid[0][0]) % 17;
-            if (newXPos > 9 || newYPos > 9)
+            newXPos = (newPos - &p->playerGrid[0][0]) / 19;
+            newYPos = (newPos - &p->playerGrid[0][0]) % 19;
+            if (newXPos > 10 || newXPos < 1 || newYPos > 10 || newYPos < 1)
             {
                 printf("Can't place ship!\n");
                 return false;
@@ -213,7 +213,7 @@ int placeSelectedShip(player *p, int x, int y)
     if (p->selectedShip != -1)
     {
         s = &p->ships[p->selectedShip];
-        if (x < 10 && y < 10)
+        if (x < 11 && x > 0 && y < 11 && y > 0)
             if (checkCells(p, &x, &y, NULL, 1))
             {
                 *s->pos[s->center] = 0;
@@ -247,7 +247,7 @@ int setSelectedShip(bool started, player *p, int selectedShip)
             s = &p->ships[p->selectedShip];
             s->isPlaced = false;
             *s->pos[s->center] = 0;
-            s->pos[s->center] = &p->playerGrid[11 + (s->center)][y];
+            s->pos[s->center] = &p->playerGrid[13 + (s->center)][y];
             return 0;
         }
     }
@@ -335,11 +335,17 @@ void updateGame(bool *running, bool *started, player *p1, player *p2)
 void drawGrid(SDL_Renderer *renderer, int r, int g, int b, int a)
 {
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
-    for (int i = 0; i <= CELL_SIZE * (BOARD_SIZE - 7) + 1; i += CELL_SIZE)
+    for (int i = CELL_SIZE + 1; i <= CELL_SIZE * (BOARD_SIZE - 8) + 1; i += CELL_SIZE)
     {
-        SDL_RenderDrawLine(renderer, 0, i, CELL_SIZE * (BOARD_SIZE - 7) + 1, i);
-        SDL_RenderDrawLine(renderer, i, 0, i, CELL_SIZE * (BOARD_SIZE - 7) + 1);
+        // top grid
+        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, i, CELL_SIZE * (BOARD_SIZE - 8) + 1, i); // horizontal lines
+        SDL_RenderDrawLine(renderer, i, CELL_SIZE + 1, i, CELL_SIZE * (BOARD_SIZE - 8) + 1); // vertical lines
+
+        // bottom grid
+        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, i + 11 * CELL_SIZE, CELL_SIZE * (BOARD_SIZE - 8) + 1, i + 11 * CELL_SIZE);
+        SDL_RenderDrawLine(renderer, i, CELL_SIZE * 12 + 1, i, CELL_SIZE * (BOARD_SIZE + 2) + 1);
     }
+    SDL_RenderDrawLine(renderer, 12 * CELL_SIZE + 1, 0, 12 * CELL_SIZE + 1, CELL_SIZE * (BOARD_SIZE + 3) + 1); // vertical dividing line
 }
 
 void drawPlayerShips(SDL_Renderer *renderer, player *p)
@@ -387,7 +393,7 @@ int main()
     initializeShips(&p1);
     initializeShips(&p2);
 
-    SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE + 1, CELL_SIZE * BOARD_SIZE + 1);
+    SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE + 1, CELL_SIZE * (BOARD_SIZE + 3) + 1);
 
     render(renderer, &p1, &p2);
 
@@ -402,8 +408,6 @@ int main()
         (sleepTime >= 0) ? SDL_Delay(sleepTime) : printf("Running %lfs behind!\n", -1 * sleepTime); // need to calculate delay instead of fixed delay, adjust FPS
     }
 
-    // ship can't be placed outside of board
-    // need to add extra row or column to each side, draw boundaries
     // box selection area
     // keep track of player's hits and misses in opponent grid
     // keep track of enemy hits in player grid
