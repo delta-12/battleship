@@ -152,11 +152,14 @@ void rotateShip(player *p, int rotation)
     // rotation == 3 - CCW
     // rotation == 1 - CW
     int rot = (p->ships[p->selectedShip].rot + rotation) % 4;
+    int placing = 0;
 
     if (p->selectedShip != -1)
     {
         // check cells before applying rotation
-        if (checkCells(p, NULL, NULL, &rot, 0))
+        if (p->ships[p->selectedShip].isPlaced)
+            placing = 1; // if ship is placed, set placing to 1
+        if (checkCells(p, NULL, NULL, &rot, placing))
             p->ships[p->selectedShip].rot = rot;
     }
 }
