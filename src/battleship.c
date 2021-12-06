@@ -325,6 +325,32 @@ void handleInput(bool *running, bool *started, player *p)
     }
 }
 
+// place opponent's ships at random locations w/ random rotations
+void initializeOpponent(player *p)
+{
+    ship *s;
+    srand(time(NULL));
+    int x, y;
+
+    for (int i = 0; i < NSHIPS; i++)
+    {
+        p->selectedShip = i;
+        s = &p->ships[p->selectedShip];
+        s->rot = rand() % 4;
+        do
+        {
+            x = (rand() % 10) + 1;
+            y = (rand() % 10) + 1;
+            if (checkCells(p, &x, &y, NULL, 1))
+            {
+                placeSelectedShip(p, x, y);
+                placeShips(p);
+            }
+        } while (!s->isPlaced);
+    }
+    p->selectedShip = -1;
+}
+
 // perform game logic
 void updateGame(bool *running, bool *started, player *p1, player *p2)
 {
@@ -368,15 +394,14 @@ void drawPlayerShips(SDL_Renderer *renderer, player *p)
 }
 
 // draw objects and display in window
-void render(SDL_Renderer *renderer, player *p1, player *p2)
+void render(SDL_Renderer *renderer, player *p)
 {
     SDL_Color gridBackground = {22, 22, 22, 255}; // Barely Black
     SDL_Color gridLineColor = {44, 44, 44, 255};  // Dark grey
 
     drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
     drawGrid(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
-    drawPlayerShips(renderer, p1);
-    // drawPlayerShips(renderer, p2);
+    drawPlayerShips(renderer, p);
     SDL_RenderPresent(renderer);
     SDL_RenderClear(renderer);
 }
@@ -385,7 +410,7 @@ void render(SDL_Renderer *renderer, player *p1, player *p2)
 int main()
 {
     SDL_Window *window = NULL;
-    player p1, p2;
+    player p1, p2; // player is p1 and computer/opponent is p2
     clock_t start, end;
     double sleepTime;
     bool running = true, started = false;
@@ -396,15 +421,17 @@ int main()
     initializeShips(&p1);
     initializeShips(&p2);
 
+    initializeOpponent(&p2);
+
     SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE + 1, CELL_SIZE * (BOARD_SIZE + 3) + 1);
 
-    render(renderer, &p1, &p2);
+    render(renderer, &p1);
 
     while (running)
     {
         start = clock();
         updateGame(&running, &started, &p1, &p2);
-        render(renderer, &p1, &p2);
+        render(renderer, &p1);
         end = clock();
 
         sleepTime = SKIP_TICKS - ((double)(end - start) / CLOCKS_PER_SEC);
@@ -417,6 +444,17 @@ int main()
     // 1 = ship present
     // 2 = enemy hit
     // check each position pointer array after each hit to see if ship sank
+
+    /* AI
+    select random cell
+    hit or miss
+    if hit
+        random cell in 1 of 4 possible directions
+        if hit, cell either direction along line
+        if miss, select new direction
+    if miss
+        new random cell
+    */
 
     teardown(renderer, window);
 
