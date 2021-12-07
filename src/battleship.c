@@ -269,16 +269,25 @@ int startGame(player *p, bool *started)
     return 0;
 }
 
-void checkSink()
+void checkSunk()
 {
 }
 
-void checkGameOver()
+int checkGameOver(player *p)
 {
+    ship *s;
+    for (int i = 0; i < NSHIPS; i++)
+    {
+        s = &p->ships[i];
+        for (int j = 0; j < s->len; j++)
+            if (*s->pos[j] == 1)
+                return 0;
+    }
+    return 1;
 }
 
 // p1 shoots at p2
-int takeShot(player *p1, player *p2, int x, int y)
+int takeShot(player *p1, player *p2, bool *running, int x, int y)
 {
     if (x < 11 && x > 0 && y < 22 && y > 11)
     {
@@ -298,6 +307,8 @@ int takeShot(player *p1, player *p2, int x, int y)
             p1->grid[x][y] = 3;
             p2->grid[x][y - 11] = 3;
             printf("Hit!\n");
+            if (checkGameOver(p2))
+                *running = false;
             return 1;
         }
     }
@@ -347,7 +358,7 @@ void handleInput(bool *running, bool *started, int *turn, player *p1, player *p2
     case SDL_MOUSEBUTTONDOWN:
         if (*started)
         {
-            if (takeShot(p1, p2, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE))
+            if (takeShot(p1, p2, running, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE))
                 *turn += 1;
             break;
         }
@@ -384,14 +395,14 @@ void initializeOpponent(player *p)
 }
 
 // opponent takes random shot
-void opponentShot(player *p1, player *p2)
+void opponentShot(player *p1, player *p2, bool *running)
 {
     int x, y;
     do
     {
         x = (rand() % 10) + 1;
         y = (rand() % 10) + 12;
-    } while (!takeShot(p2, p1, x, y));
+    } while (!takeShot(p2, p1, running, x, y));
 }
 
 // perform game logic
@@ -399,7 +410,7 @@ int updateGame(bool *running, bool *started, int *turn, player *p1, player *p2)
 {
     if (*turn % 2 == 1)
     {
-        opponentShot(p1, p2);
+        opponentShot(p1, p2, running);
         *turn += 1;
         return 0;
     }
@@ -500,7 +511,7 @@ int main()
 
     // testing
     SDL_Window *window2 = NULL;
-    SDL_Renderer *renderer2 = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
+    SDL_Renderer *renderer2 = initializeSDL(window, "Battleship Opp", CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
     render(renderer2, &p2);
 
     render(renderer, &p1);
@@ -516,6 +527,9 @@ int main()
         sleepTime = SKIP_TICKS - ((double)(end - start) / CLOCKS_PER_SEC);
         (sleepTime >= 0) ? SDL_Delay(sleepTime) : printf("Running %lfs behind!\n", -1 * sleepTime); // need to calculate delay instead of fixed delay, adjust FPS
     }
+
+    printf("Game Over!\n");
+    SDL_Delay(3000);
 
     // box selection area
     // fix filling cells- off by 1 pixel
