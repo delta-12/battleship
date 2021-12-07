@@ -1,39 +1,14 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
-#include "engine.h"
 #include <time.h>
-
-#define BOARD_SIZE_X 19
-#define BOARD_SIZE_Y 23
-#define CELL_SIZE 36
-#define NSHIPS 5
-
-#define FPS 100
-#define SKIP_TICKS 1000 / FPS
-
-// general ship struct
-typedef struct
-{
-    int *pos[5];
-    int len, rot; // rotation- 0 left, 1 up, 2 right, 3 down
-    int *initCenterPos;
-    int center;
-    bool isPlaced;
-} ship;
-
-typedef struct
-{
-    // player's boards
-    int grid[BOARD_SIZE_X][BOARD_SIZE_Y];
-
-    // player's ships
-    ship ships[NSHIPS];
-    int selectedShip;
-} player;
+#include "engine.h"
+#include "rendering.h"
 
 /* Initialization
+**********************************************************************
 *********************************************************************/
+
 // zero out grids
 void initializeBoards(player *p)
 {
@@ -78,178 +53,38 @@ void initializeShips(player *p)
 
     p->selectedShip = -1; // no ship selected yet
 }
-/********************************************************************/
 
-/* Game Logic
-*********************************************************************/
-//return offset corresponding to rotation
-int getRotation(int rotation)
-{
-    switch (rotation)
-    {
-    case 0:
-        return BOARD_SIZE_Y;
-    case 2:
-        return -BOARD_SIZE_Y;
-    case 3:
-        return -1;
-    default:
-        return rotation;
-    }
-}
-
-// check if cells are occupied
-bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
-{
-    ship *s = &p->ships[p->selectedShip];
-    int rot, *newPos, newXPos, newYPos, *newCenter = s->pos[s->center];
-
-    // check if center point can be moved
-    if (x != NULL && y != NULL)
-    {
-        if (p->grid[*x][*y] == 1 && s->pos[s->center] != &p->grid[*x][*y])
-        {
-            printf("Can't place center!\n");
-            return false;
-        }
-        newCenter = &p->grid[*x][*y]; // if cell is clear, set new center equal to pointer to new cell
-    }
-
-    // apply rotation if necessary
-    if (rotation != NULL)
-        rot = getRotation(*rotation);
-    else
-        rot = getRotation(s->rot);
-
-    // check if rest of ship can be moved
-    for (int i = 0; i < s->len; i++)
-    {
-        newPos = newCenter - ((s->center - i) * rot);
-        if (placing)
-        {
-            newXPos = (newPos - &p->grid[0][0]) / BOARD_SIZE_Y;
-            newYPos = (newPos - &p->grid[0][0]) % BOARD_SIZE_Y;
-            if (newXPos > 10 || newXPos < 1 || newYPos > 10 || newYPos < 1)
-            {
-                printf("Can't place ship!\n");
-                return false;
-            }
-        }
-        if (s->pos[i] != newCenter && *newPos == 1)
-        {
-            printf("Can't place ship!\n");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void rotateShip(player *p, int rotation)
-{
-    // rotation == 3 - CCW
-    // rotation == 1 - CW
-    int rot = (p->ships[p->selectedShip].rot + rotation) % 4;
-    int placing = 0;
-
-    if (p->selectedShip != -1)
-    {
-        // check cells before applying rotation
-        if (p->ships[p->selectedShip].isPlaced)
-            placing = 1; // if ship is placed, set placing to 1
-        if (checkCells(p, NULL, NULL, &rot, placing))
-            p->ships[p->selectedShip].rot = rot;
-    }
-}
-
-// update position pointer arrays and grids to place ships
-// check cells before call placeShips()
-void placeShips(player *p)
+// place opponent's ships at random locations w/ random rotations
+void initializeOpponent(player *p)
 {
     ship *s;
-    int rot;
+    int x, y;
 
     for (int i = 0; i < NSHIPS; i++)
     {
-        s = &p->ships[i];
-
-        // apply rotation
-        rot = getRotation(s->rot);
-
-        // place ship w/ rotation
-        for (int j = 0; j < s->len; j++)
-        {
-            if (s->pos[j] == s->pos[s->center])
-            {
-                *s->pos[s->center] = 1;
-                continue;
-            }
-            *s->pos[j] = 0;
-            s->pos[j] = s->pos[s->center] - ((s->center - j) * rot); // calculate offset from center for each block
-            *s->pos[j] = 1;
-        }
-    }
-}
-
-// move selected ship to initial position, right of the board
-void clearSelectedShip(player *p)
-{
-    ship *s = &p->ships[p->selectedShip];
-    for (int i = 0; i < s->len; i++)
-    {
-        *s->pos[i] = 0;
-    }
-    s->rot = 0;
-    s->pos[s->center] = s->initCenterPos;
-}
-
-int placeSelectedShip(player *p, int x, int y)
-{
-    ship *s;
-    if (p->selectedShip != -1)
-    {
+        p->selectedShip = i;
         s = &p->ships[p->selectedShip];
-        if (x < 11 && x > 0 && y < 11 && y > 0)
+        s->rot = rand() % 4;
+        do
+        {
+            x = (rand() % 10) + 1;
+            y = (rand() % 10) + 1;
             if (checkCells(p, &x, &y, NULL, 1))
             {
-                *s->pos[s->center] = 0;
-                s->pos[s->center] = &p->grid[x][y];
-                s->isPlaced = true;
-                return 0;
+                placeSelectedShip(p, x, y);
+                placeShips(p);
             }
-        printf("Can't place selected ship!\n");
-        return 1;
+        } while (!s->isPlaced);
     }
-    return 0;
+    p->selectedShip = -1;
 }
 
-// check that ship can be selected
-int setSelectedShip(bool started, player *p, int selectedShip)
-{
-    ship *s;
-    int x, y = 13;
+/*********************************************************************
+*********************************************************************/
 
-    // check that game has not started and another ship is not selected
-    if (!started)
-    {
-        // preserve placement if previously selected ship was placed
-        if (p->selectedShip != -1)
-            (p->ships[p->selectedShip].isPlaced) ? p->selectedShip = -1 : clearSelectedShip(p);
-        // verify that cells where selected ship is placed are not occupied
-        x = 2 + (p->ships[selectedShip].center);
-        if (checkCells(p, &x, &y, &p->ships[selectedShip].rot, 0))
-        {
-            p->selectedShip = selectedShip;
-            s = &p->ships[p->selectedShip];
-            s->isPlaced = false;
-            *s->pos[s->center] = 0;
-            s->pos[s->center] = &p->grid[13 + (s->center)][y];
-            return 0;
-        }
-    }
-    printf("Can't select ship!\n");
-    return 1;
-}
+/* Game Logic
+**********************************************************************
+*********************************************************************/
 
 // start game if all ships are placed on board
 int startGame(player *p, bool *started)
@@ -269,50 +104,15 @@ int startGame(player *p, bool *started)
     return 0;
 }
 
-void checkSunk()
+// opponent takes random shot
+void opponentShot(player *p1, player *p2, bool *running)
 {
-}
-
-int checkGameOver(player *p)
-{
-    ship *s;
-    for (int i = 0; i < NSHIPS; i++)
+    int x, y;
+    do
     {
-        s = &p->ships[i];
-        for (int j = 0; j < s->len; j++)
-            if (*s->pos[j] == 1)
-                return 0;
-    }
-    return 1;
-}
-
-// p1 shoots at p2
-int takeShot(player *p1, player *p2, bool *running, int x, int y)
-{
-    if (x < 11 && x > 0 && y < 22 && y > 11)
-    {
-        if (p1->grid[x][y] == 2)
-        {
-            printf("Shot taken already!\n");
-            return 0;
-        }
-        if (p2->grid[x][y - 11] == 0)
-        {
-            p1->grid[x][y] = 2;
-            printf("Miss!\n");
-            return 1;
-        }
-        if (p2->grid[x][y - 11] == 1)
-        {
-            p1->grid[x][y] = 3;
-            p2->grid[x][y - 11] = 3;
-            printf("Hit!\n");
-            if (checkGameOver(p2))
-                *running = false;
-            return 1;
-        }
-    }
-    return 0;
+        x = (rand() % 10) + 1;
+        y = (rand() % 10) + 12;
+    } while (!takeShot(p2, p1, running, x, y));
 }
 
 // perform actions corresponding to user input
@@ -369,42 +169,6 @@ void handleInput(bool *running, bool *started, int *turn, player *p1, player *p2
     }
 }
 
-// place opponent's ships at random locations w/ random rotations
-void initializeOpponent(player *p)
-{
-    ship *s;
-    int x, y;
-
-    for (int i = 0; i < NSHIPS; i++)
-    {
-        p->selectedShip = i;
-        s = &p->ships[p->selectedShip];
-        s->rot = rand() % 4;
-        do
-        {
-            x = (rand() % 10) + 1;
-            y = (rand() % 10) + 1;
-            if (checkCells(p, &x, &y, NULL, 1))
-            {
-                placeSelectedShip(p, x, y);
-                placeShips(p);
-            }
-        } while (!s->isPlaced);
-    }
-    p->selectedShip = -1;
-}
-
-// opponent takes random shot
-void opponentShot(player *p1, player *p2, bool *running)
-{
-    int x, y;
-    do
-    {
-        x = (rand() % 10) + 1;
-        y = (rand() % 10) + 12;
-    } while (!takeShot(p2, p1, running, x, y));
-}
-
 // perform game logic
 int updateGame(bool *running, bool *started, int *turn, player *p1, player *p2)
 {
@@ -421,72 +185,9 @@ int updateGame(bool *running, bool *started, int *turn, player *p1, player *p2)
     }
     return 0;
 }
-/********************************************************************/
 
-/* Render Game
+/*********************************************************************
 *********************************************************************/
-void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a)
-{
-    SDL_SetRenderDrawColor(renderer, r, g, b, a);
-
-    // draw 2 10 x 10 grids
-    for (int i = 1; i < 12; i++)
-    {
-        // top grid
-        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE * 11 + 1, i * CELL_SIZE + 1); // horizontal lines
-        SDL_RenderDrawLine(renderer, i * CELL_SIZE + 1, CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE * 11 + 1); // vertical lines
-
-        // bottom grid
-        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, (i + 11) * CELL_SIZE + 1, CELL_SIZE * 11 + 1, (i + 11) * CELL_SIZE + 1);
-        SDL_RenderDrawLine(renderer, i * CELL_SIZE + 1, CELL_SIZE * 12 + 1, i * CELL_SIZE + 1, CELL_SIZE * 22 + 1);
-    }
-
-    // draw vertical dividing line
-    SDL_RenderDrawLine(renderer, 12 * CELL_SIZE + 1, 0, 12 * CELL_SIZE + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
-}
-
-void drawPlayerShips(SDL_Renderer *renderer, player *p)
-{
-    int cellVal;
-
-    for (int i = 0; i < BOARD_SIZE_X; i++)
-    {
-        for (int j = 0; j < BOARD_SIZE_Y; j++)
-        {
-            cellVal = p->grid[i][j];
-            switch (cellVal)
-            {
-            case 1:
-                SDL_SetRenderDrawColor(renderer, 22, 198, 12, 255); // player's ship- green
-                break;
-            case 2:
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // miss- white
-                break;
-            case 3:
-                SDL_SetRenderDrawColor(renderer, 197, 15, 31, 255); // hit- red
-                break;
-            default:
-                continue;
-            }
-            SDL_Rect rect = {i * CELL_SIZE + 2, j * CELL_SIZE + 2, CELL_SIZE - 1, CELL_SIZE - 1};
-            SDL_RenderFillRect(renderer, &rect);
-        }
-    }
-}
-
-// draw objects and display in window
-void render(SDL_Renderer *renderer, player *p)
-{
-    SDL_Color gridBackground = {22, 22, 22, 255}; // Barely Black
-    SDL_Color gridLineColor = {44, 44, 44, 255};  // Dark grey
-
-    drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
-    drawGrids(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
-    drawPlayerShips(renderer, p);
-    SDL_RenderPresent(renderer);
-    SDL_RenderClear(renderer);
-}
-/********************************************************************/
 
 int main()
 {
@@ -532,7 +233,6 @@ int main()
     SDL_Delay(3000);
 
     // box selection area
-    // fix filling cells- off by 1 pixel
     // keep track of player's hits and misses in opponent grid
     // keep track of enemy hits in player grid
     // check each position pointer array after each hit to see if ship sank
@@ -557,37 +257,3 @@ int main()
 
     return 0;
 }
-
-/*  New Game Loop
-
-FPS dependent on Constant Game Speed
-
-
-
-use constant fps
-
-initialize 
-
-while(running)
-{
-    update_game();
-    display_game();
-
-    sleep_time = calculate_sleep();
-    if (sleep_time > 0)
-    {
-        sleep(sleep_time);
-    }
-}
-
-update_game()
-    poll input
-    update state of objects/grids
-
-display_game()
-    draw objects to display
-        position, orientation calculations and such done here
-
-important to properly group functions into update_game() and display_game()
-
-*/

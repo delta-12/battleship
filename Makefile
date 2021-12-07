@@ -9,24 +9,16 @@ SRCS = $(wildcard $(SRC)/*.c)
 OBJS = $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SRCS))
 BINS = $(patsubst $(SRC)/%.c, $(BIN)/%, $(SRCS))
 
-all: engine.o battleship.o main
+all: engine.o rendering.o battleship
 
 engine.o: $(SRC)/engine.c $(SRC)/engine.h
 	${CC} ${CFLAGS} -o $(OBJ)/engine.o -c $(SRC)/engine.c
 
-battleship: $(SRC)/battleship.c $(OBJ)/engine.o
+rendering.o: $(SRC)/rendering.c $(SRC)/rendering.h
+	${CC} ${CFLAGS} -o $(OBJ)/rendering.o -c $(SRC)/rendering.c
+
+battleship: $(SRC)/battleship.c $(OBJ)/engine.o $(OBJ)/rendering.o
 	${CC} ${CFLAGS} -o $(BIN)/$@ $^
-	# $(BIN)/$@
-
-# %.o: $(SRC)/%.c $(SRC)/%.h
-# 	$(CC) $(CFLAGS) -o $(OBJ)/$@ -c $^
-
-main: $(SRC)/main.c $(OBJ)/ansi_escapes.o $(OBJ)/core.o $(OBJ)/hanoi.o $(SRC)/main_resources.h
-	${CC} ${CFLAGS} -o $(BIN)/$@ $^
-	$(BIN)/$@
-
-test: $(SRC)/test.c
-	${CC} ${CFLAGS}-o $(BIN)/$@ $<
 	# $(BIN)/$@
 
 clean:
