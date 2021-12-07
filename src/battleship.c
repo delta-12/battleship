@@ -4,7 +4,8 @@
 #include "engine.h"
 #include <time.h>
 
-#define BOARD_SIZE 19
+#define BOARD_SIZE_X 19
+#define BOARD_SIZE_Y 23
 #define CELL_SIZE 36
 #define NSHIPS 5
 
@@ -24,8 +25,7 @@ typedef struct
 typedef struct
 {
     // player's boards
-    int playerGrid[BOARD_SIZE][BOARD_SIZE];
-    int opponentGrid[BOARD_SIZE - 9][BOARD_SIZE - 9];
+    int grid[BOARD_SIZE_X][BOARD_SIZE_Y];
 
     // player's ships
     ship ships[NSHIPS];
@@ -34,16 +34,14 @@ typedef struct
 
 /* Initialization
 *********************************************************************/
+// zero out grids
 void initializeBoards(player *p)
 {
-    // zero out grids
-    for (int i = 0; i < BOARD_SIZE; i++)
+    for (int i = 0; i < BOARD_SIZE_X; i++)
     {
-        for (int j = 0; j < BOARD_SIZE; j++)
+        for (int j = 0; j < BOARD_SIZE_Y; j++)
         {
-            p->playerGrid[i][j] = 0;
-            if (i < BOARD_SIZE - 8 && i > 0 && j < BOARD_SIZE - 8 && j > 0)
-                p->opponentGrid[i][j] = 0;
+            p->grid[i][j] = 0;
         }
     }
 }
@@ -71,11 +69,11 @@ void initializeShips(player *p)
         // place ships to right of player board
         for (int j = 0; j < p->ships[i].len; j++)
         {
-            p->playerGrid[13 + j][i * 2 + 1] = 1;
-            p->ships[i].pos[j] = &p->playerGrid[13 + j][i * 2 + 1];
+            p->grid[13 + j][i * 2 + 1] = 1;
+            p->ships[i].pos[j] = &p->grid[13 + j][i * 2 + 1];
         }
 
-        p->ships[i].initCenterPos = p->ships[i].pos[p->ships[i].len / 2]; // initial position of ship's center
+        p->ships[i].initCenterPos = p->ships[i].pos[p->ships[i].center]; // initial position of ship's center
     }
 
     p->selectedShip = -1; // no ship selected yet
@@ -90,9 +88,9 @@ int getRotation(int rotation)
     switch (rotation)
     {
     case 0:
-        return 19;
+        return BOARD_SIZE_Y;
     case 2:
-        return -19;
+        return -BOARD_SIZE_Y;
     case 3:
         return -1;
     default:
@@ -109,12 +107,12 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
     // check if center point can be moved
     if (x != NULL && y != NULL)
     {
-        if (p->playerGrid[*x][*y] == 1 && s->pos[s->center] != &p->playerGrid[*x][*y])
+        if (p->grid[*x][*y] == 1 && s->pos[s->center] != &p->grid[*x][*y])
         {
             printf("Can't place center!\n");
             return false;
         }
-        newCenter = &p->playerGrid[*x][*y]; // if cell is clear, set new center equal to pointer to new cell
+        newCenter = &p->grid[*x][*y]; // if cell is clear, set new center equal to pointer to new cell
     }
 
     // apply rotation if necessary
@@ -129,8 +127,8 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
         newPos = newCenter - ((s->center - i) * rot);
         if (placing)
         {
-            newXPos = (newPos - &p->playerGrid[0][0]) / 19;
-            newYPos = (newPos - &p->playerGrid[0][0]) % 19;
+            newXPos = (newPos - &p->grid[0][0]) / BOARD_SIZE_Y;
+            newYPos = (newPos - &p->grid[0][0]) % BOARD_SIZE_Y;
             if (newXPos > 10 || newXPos < 1 || newYPos > 10 || newYPos < 1)
             {
                 printf("Can't place ship!\n");
@@ -165,6 +163,7 @@ void rotateShip(player *p, int rotation)
 }
 
 // update position pointer arrays and grids to place ships
+// check cells before call placeShips()
 void placeShips(player *p)
 {
     ship *s;
@@ -192,12 +191,6 @@ void placeShips(player *p)
     }
 }
 
-void takeShot()
-{
-    // type in coords
-    // space to fire, c to clear
-}
-
 // move selected ship to initial position, right of the board
 void clearSelectedShip(player *p)
 {
@@ -220,7 +213,7 @@ int placeSelectedShip(player *p, int x, int y)
             if (checkCells(p, &x, &y, NULL, 1))
             {
                 *s->pos[s->center] = 0;
-                s->pos[s->center] = &p->playerGrid[x][y];
+                s->pos[s->center] = &p->grid[x][y];
                 s->isPlaced = true;
                 return 0;
             }
@@ -250,7 +243,7 @@ int setSelectedShip(bool started, player *p, int selectedShip)
             s = &p->ships[p->selectedShip];
             s->isPlaced = false;
             *s->pos[s->center] = 0;
-            s->pos[s->center] = &p->playerGrid[13 + (s->center)][y];
+            s->pos[s->center] = &p->grid[13 + (s->center)][y];
             return 0;
         }
     }
@@ -276,8 +269,43 @@ int startGame(player *p, bool *started)
     return 0;
 }
 
+void checkSink()
+{
+}
+
+void checkGameOver()
+{
+}
+
+// p1 shoots at p2
+int takeShot(player *p1, player *p2, int x, int y)
+{
+    if (x < 11 && x > 0 && y < 22 && y > 11)
+    {
+        if (p1->grid[x][y] == 2)
+        {
+            printf("Shot taken already!\n");
+            return 0;
+        }
+        if (p2->grid[x][y - 11] == 0)
+        {
+            p1->grid[x][y] = 2;
+            printf("Miss!\n");
+            return 1;
+        }
+        if (p2->grid[x][y - 11] == 1)
+        {
+            p1->grid[x][y] = 3;
+            p2->grid[x][y - 11] = 3;
+            printf("Hit!\n");
+            return 1;
+        }
+    }
+    return 0;
+}
+
 // perform actions corresponding to user input
-void handleInput(bool *running, bool *started, player *p)
+void handleInput(bool *running, bool *started, int *turn, player *p1, player *p2)
 {
     SDL_Event event = getInput();
     switch (event.type)
@@ -289,36 +317,41 @@ void handleInput(bool *running, bool *started, player *p)
         switch (event.key.keysym.scancode)
         {
         case SDL_SCANCODE_1:
-            setSelectedShip(*started, p, 0);
+            setSelectedShip(*started, p1, 0);
             break;
         case SDL_SCANCODE_2:
-            setSelectedShip(*started, p, 1);
+            setSelectedShip(*started, p1, 1);
             break;
         case SDL_SCANCODE_3:
-            setSelectedShip(*started, p, 2);
+            setSelectedShip(*started, p1, 2);
             break;
         case SDL_SCANCODE_4:
-            setSelectedShip(*started, p, 3);
+            setSelectedShip(*started, p1, 3);
             break;
         case SDL_SCANCODE_5:
-            setSelectedShip(*started, p, 4);
+            setSelectedShip(*started, p1, 4);
             break;
         case SDL_SCANCODE_LEFT:
-            rotateShip(p, 3);
+            rotateShip(p1, 3);
             break;
         case SDL_SCANCODE_RIGHT:
-            rotateShip(p, 1);
+            rotateShip(p1, 1);
             break;
         case SDL_SCANCODE_S:
-            startGame(p, started);
+            startGame(p1, started);
             break;
         default:
             break;
         }
         break;
     case SDL_MOUSEBUTTONDOWN:
-        placeSelectedShip(p, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE);
-        // add mouse events for placing ships and taking shots
+        if (*started)
+        {
+            if (takeShot(p1, p2, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE))
+                *turn += 1;
+            break;
+        }
+        placeSelectedShip(p1, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE);
         break;
     default:
         break;
@@ -329,7 +362,6 @@ void handleInput(bool *running, bool *started, player *p)
 void initializeOpponent(player *p)
 {
     ship *s;
-    srand(time(NULL));
     int x, y;
 
     for (int i = 0; i < NSHIPS; i++)
@@ -351,44 +383,82 @@ void initializeOpponent(player *p)
     p->selectedShip = -1;
 }
 
-// perform game logic
-void updateGame(bool *running, bool *started, player *p1, player *p2)
+// opponent takes random shot
+void opponentShot(player *p1, player *p2)
 {
-    handleInput(running, started, p1);
-    placeShips(p1);
+    int x, y;
+    do
+    {
+        x = (rand() % 10) + 1;
+        y = (rand() % 10) + 12;
+    } while (!takeShot(p2, p1, x, y));
+}
+
+// perform game logic
+int updateGame(bool *running, bool *started, int *turn, player *p1, player *p2)
+{
+    if (*turn % 2 == 1)
+    {
+        opponentShot(p1, p2);
+        *turn += 1;
+        return 0;
+    }
+    handleInput(running, started, turn, p1, p2);
+    if (!*started)
+    {
+        placeShips(p1);
+    }
+    return 0;
 }
 /********************************************************************/
 
 /* Render Game
 *********************************************************************/
-void drawGrid(SDL_Renderer *renderer, int r, int g, int b, int a)
+void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a)
 {
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
-    for (int i = CELL_SIZE + 1; i <= CELL_SIZE * (BOARD_SIZE - 8) + 1; i += CELL_SIZE)
+
+    // draw 2 10 x 10 grids
+    for (int i = 1; i < 12; i++)
     {
         // top grid
-        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, i, CELL_SIZE * (BOARD_SIZE - 8) + 1, i); // horizontal lines
-        SDL_RenderDrawLine(renderer, i, CELL_SIZE + 1, i, CELL_SIZE * (BOARD_SIZE - 8) + 1); // vertical lines
+        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE * 11 + 1, i * CELL_SIZE + 1); // horizontal lines
+        SDL_RenderDrawLine(renderer, i * CELL_SIZE + 1, CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE * 11 + 1); // vertical lines
 
         // bottom grid
-        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, i + 11 * CELL_SIZE, CELL_SIZE * (BOARD_SIZE - 8) + 1, i + 11 * CELL_SIZE);
-        SDL_RenderDrawLine(renderer, i, CELL_SIZE * 12 + 1, i, CELL_SIZE * (BOARD_SIZE + 2) + 1);
+        SDL_RenderDrawLine(renderer, CELL_SIZE + 1, (i + 11) * CELL_SIZE + 1, CELL_SIZE * 11 + 1, (i + 11) * CELL_SIZE + 1);
+        SDL_RenderDrawLine(renderer, i * CELL_SIZE + 1, CELL_SIZE * 12 + 1, i * CELL_SIZE + 1, CELL_SIZE * 22 + 1);
     }
-    SDL_RenderDrawLine(renderer, 12 * CELL_SIZE + 1, 0, 12 * CELL_SIZE + 1, CELL_SIZE * (BOARD_SIZE + 3) + 1); // vertical dividing line
+
+    // draw vertical dividing line
+    SDL_RenderDrawLine(renderer, 12 * CELL_SIZE + 1, 0, 12 * CELL_SIZE + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
 }
 
 void drawPlayerShips(SDL_Renderer *renderer, player *p)
 {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (int i = 0; i < BOARD_SIZE; i++)
+    int cellVal;
+
+    for (int i = 0; i < BOARD_SIZE_X; i++)
     {
-        for (int j = 0; j < BOARD_SIZE; j++)
+        for (int j = 0; j < BOARD_SIZE_Y; j++)
         {
-            if (p->playerGrid[i][j] == 1)
+            cellVal = p->grid[i][j];
+            switch (cellVal)
             {
-                SDL_Rect rect = {i * CELL_SIZE + 1, j * CELL_SIZE + 1, CELL_SIZE - 1, CELL_SIZE - 1};
-                SDL_RenderFillRect(renderer, &rect);
+            case 1:
+                SDL_SetRenderDrawColor(renderer, 22, 198, 12, 255); // player's ship- green
+                break;
+            case 2:
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // miss- white
+                break;
+            case 3:
+                SDL_SetRenderDrawColor(renderer, 197, 15, 31, 255); // hit- red
+                break;
+            default:
+                continue;
             }
+            SDL_Rect rect = {i * CELL_SIZE + 2, j * CELL_SIZE + 2, CELL_SIZE - 1, CELL_SIZE - 1};
+            SDL_RenderFillRect(renderer, &rect);
         }
     }
 }
@@ -400,7 +470,7 @@ void render(SDL_Renderer *renderer, player *p)
     SDL_Color gridLineColor = {44, 44, 44, 255};  // Dark grey
 
     drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
-    drawGrid(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
+    drawGrids(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
     drawPlayerShips(renderer, p);
     SDL_RenderPresent(renderer);
     SDL_RenderClear(renderer);
@@ -413,7 +483,10 @@ int main()
     player p1, p2; // player is p1 and computer/opponent is p2
     clock_t start, end;
     double sleepTime;
-    bool running = true, started = false;
+    int turn = 0;
+    bool running = true, started = false; // testing
+
+    srand(time(NULL)); // initialize random psuedo-random seed
 
     initializeBoards(&p1);
     initializeBoards(&p2);
@@ -423,15 +496,21 @@ int main()
 
     initializeOpponent(&p2);
 
-    SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE + 1, CELL_SIZE * (BOARD_SIZE + 3) + 1);
+    SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
+
+    // testing
+    SDL_Window *window2 = NULL;
+    SDL_Renderer *renderer2 = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
+    render(renderer2, &p2);
 
     render(renderer, &p1);
 
     while (running)
     {
         start = clock();
-        updateGame(&running, &started, &p1, &p2);
+        updateGame(&running, &started, &turn, &p1, &p2);
         render(renderer, &p1);
+        render(renderer2, &p2); // testing
         end = clock();
 
         sleepTime = SKIP_TICKS - ((double)(end - start) / CLOCKS_PER_SEC);
@@ -439,11 +518,12 @@ int main()
     }
 
     // box selection area
+    // fix filling cells- off by 1 pixel
     // keep track of player's hits and misses in opponent grid
     // keep track of enemy hits in player grid
-    // 1 = ship present
-    // 2 = enemy hit
     // check each position pointer array after each hit to see if ship sank
+    // mouse motion placement prediction
+    // remove printf statements
 
     /* AI
     select random cell
@@ -455,6 +535,9 @@ int main()
     if miss
         new random cell
     */
+
+    //testing
+    teardown(renderer2, window2);
 
     teardown(renderer, window);
 
