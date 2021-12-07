@@ -32,6 +32,12 @@ void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a)
 
     // draw vertical dividing line
     SDL_RenderDrawLine(renderer, 12 * CELL_SIZE + 1, 0, 12 * CELL_SIZE + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
+
+    // draw selection box
+    SDL_RenderDrawLine(renderer, 13 * CELL_SIZE + 1, CELL_SIZE + 1, 18 * CELL_SIZE + 1, CELL_SIZE + 1);         // top
+    SDL_RenderDrawLine(renderer, 13 * CELL_SIZE + 1, 6 * CELL_SIZE + 1, 18 * CELL_SIZE + 1, 6 * CELL_SIZE + 1); // bottom
+    SDL_RenderDrawLine(renderer, 13 * CELL_SIZE + 1, CELL_SIZE + 1, 13 * CELL_SIZE + 1, 6 * CELL_SIZE + 1);     // left
+    SDL_RenderDrawLine(renderer, 18 * CELL_SIZE + 1, CELL_SIZE + 1, 18 * CELL_SIZE + 1, 6 * CELL_SIZE + 1);     // right
 }
 
 void drawPlayerShips(SDL_Renderer *renderer, player *p)

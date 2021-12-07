@@ -207,7 +207,7 @@ int placeSelectedShip(player *p, int x, int y)
 int setSelectedShip(bool started, player *p, int selectedShip)
 {
     ship *s;
-    int x, y = 13;
+    int x = 15, y = 3;
 
     // check that game has not started and another ship is not selected
     if (!started)
@@ -216,14 +216,13 @@ int setSelectedShip(bool started, player *p, int selectedShip)
         if (p->selectedShip != -1)
             (p->ships[p->selectedShip].isPlaced) ? p->selectedShip = -1 : clearSelectedShip(p);
         // verify that cells where selected ship is placed are not occupied
-        x = 2 + (p->ships[selectedShip].center);
         if (checkCells(p, &x, &y, &p->ships[selectedShip].rot, 0))
         {
             p->selectedShip = selectedShip;
             s = &p->ships[p->selectedShip];
             s->isPlaced = false;
             *s->pos[s->center] = 0;
-            s->pos[s->center] = &p->grid[13 + (s->center)][y];
+            s->pos[s->center] = &p->grid[x][y];
             return 0;
         }
     }

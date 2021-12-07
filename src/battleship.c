@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdbool.h>
-#include <SDL2/SDL.h>
 #include <time.h>
 #include "engine.h"
 #include "rendering.h"
@@ -23,6 +20,8 @@ void initializeBoards(player *p)
 
 void initializeShips(player *p)
 {
+    int x, y;
+
     // player's ships
     ship s;
     for (int i = 0; i < NSHIPS; i++)
@@ -37,15 +36,17 @@ void initializeShips(player *p)
 
     for (int i = 0; i < NSHIPS; i++)
     {
-        p->ships[i].rot = 0; // initial orientation left
-        p->ships[i].isPlaced = false;
+        p->ships[i].rot = 0;                      // initial orientation left
+        p->ships[i].isPlaced = false;             // ships not placed on board yet
         p->ships[i].center = p->ships[i].len / 2; // calculate ship's center point
 
         // place ships to right of player board
         for (int j = 0; j < p->ships[i].len; j++)
         {
-            p->grid[13 + j][i * 2 + 1] = 1;
-            p->ships[i].pos[j] = &p->grid[13 + j][i * 2 + 1];
+            x = 13 + j;
+            y = i * 2 + 7;
+            p->grid[x][y] = 1;
+            p->ships[i].pos[j] = &p->grid[x][y];
         }
 
         p->ships[i].initCenterPos = p->ships[i].pos[p->ships[i].center]; // initial position of ship's center
