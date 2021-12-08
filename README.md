@@ -44,3 +44,26 @@ Simple implementation of the classic Battleship game in C using the SDL library.
 4. The binary will placed in the `bin` directory and can be run using the following command
 
 `bin/battleship`
+
+### Windows
+
+There is an automated and a manual build option for Windows.
+
+#### Automated Build
+
+1. Install a GCC compiler for Windows such as [tdm-gcc](https://jmeubank.github.io/tdm-gcc/download/)
+2. Clone repository
+
+`git clone https://github.com/delta-12/battleship.git`
+
+3. Run the build script
+
+`cd battleship\windows && build.bat`
+
+4. The binary will placed in the `bin` directory and can be run by double-clicking or running the following command
+
+`bin\battleship.exe`
+
+#### Manual Build
+
+_Coming soon!_
