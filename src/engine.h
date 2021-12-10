@@ -20,6 +20,7 @@ typedef struct
     int *initCenterPos;
     int center;
     bool isPlaced;
+    bool sunk;
 } ship;
 
 // general player struct
@@ -54,7 +55,7 @@ int setSelectedShip(bool started, player *p, int selectedShip);
 
 /* Shooting
 *********************************************************************/
-void checkSunk();
+int checkSunk(player *p, int x, int y);
 int checkGameOver(player *p);
 int takeShot(player *p1, player *p2, bool *running, int x, int y);
 /********************************************************************/

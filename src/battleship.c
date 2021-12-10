@@ -2,6 +2,13 @@
 #include "engine.h"
 #include "rendering.h"
 
+typedef struct
+{
+    int initX, initY;
+    int offset1, offset2;
+    int rot;
+} opponentGuess;
+
 /* Initialization
 **********************************************************************
 *********************************************************************/
@@ -38,6 +45,7 @@ void initializeShips(player *p)
     {
         p->ships[i].rot = 0;                      // initial orientation left
         p->ships[i].isPlaced = false;             // ships not placed on board yet
+        p->ships[i].sunk = false;                 // no ships sunk yet
         p->ships[i].center = p->ships[i].len / 2; // calculate ship's center point
 
         // place ships to right of player board
@@ -55,8 +63,17 @@ void initializeShips(player *p)
     p->selectedShip = -1; // no ship selected yet
 }
 
+void resetOpGuess(opponentGuess *opGuess)
+{
+    opGuess->initX = 0;
+    opGuess->initY = 0;
+    opGuess->offset1 = 0;
+    opGuess->offset2 = 0;
+    opGuess->rot = -1;
+}
+
 // place opponent's ships at random locations w/ random rotations
-void initializeOpponent(player *p)
+void initializeOpponent(player *p, opponentGuess *opGuess)
 {
     ship *s;
     int x, y;
@@ -78,6 +95,8 @@ void initializeOpponent(player *p)
         } while (!s->isPlaced);
     }
     p->selectedShip = -1;
+
+    resetOpGuess(opGuess);
 }
 
 /*********************************************************************
@@ -106,20 +125,94 @@ int startGame(player *p, bool *started)
 }
 
 // opponent takes random shot
-void opponentShot(player *p1, player *p2, bool *running)
+void opponentShot(player *p1, player *p2, bool *running, opponentGuess *opGuess)
 {
-    int x, y;
-    do
+    int x, y, rot, offset, action, i = 0;
+
+    if (opGuess->initX != 0 && opGuess->initY != 0)
     {
-        x = (rand() % 10) + 1;
-        y = (rand() % 10) + 12;
-    } while (!takeShot(p2, p1, running, x, y));
+        do
+        {
+            x = opGuess->initX;
+            y = opGuess->initY;
+
+            offset = opGuess->offset1 + 1;
+            if (opGuess->offset2 > 0)
+                offset = opGuess->offset2 * -1;
+
+            if (opGuess->rot == -1)
+                opGuess->rot = rand() % 4;
+            rot = opGuess->rot;
+            switch (opGuess->rot)
+            {
+            case 0:
+                x = opGuess->initX - offset;
+                break;
+            case 1:
+                y = opGuess->initY - offset;
+                break;
+            case 2:
+                x = opGuess->initX + offset;
+                break;
+            case 3:
+                y = opGuess->initY + offset;
+                break;
+            }
+
+            action = takeShot(p2, p1, running, x, y);
+
+            switch (action)
+            {
+            case 2:
+                if (opGuess->offset2 > 0)
+                    opGuess->offset2 += 1;
+                else
+                    opGuess->offset1 += 1;
+                break;
+            case 3:
+                resetOpGuess(opGuess);
+                break;
+            default:
+                if (opGuess->offset1 == 0)
+                {
+                    opGuess->rot = (opGuess->rot + 1) % 4;
+                    if (opGuess->rot == rot)
+                        opGuess->offset2 = 1;
+                }
+                else
+                    opGuess->offset2 = 1;
+                break;
+            }
+            i++;
+        } while (action == 0 && i < 4);
+        if (i >= 4)
+        {
+            resetOpGuess(opGuess);
+            opponentShot(p1, p2, running, opGuess);
+        }
+    }
+    else
+    {
+        do
+        {
+            x = (rand() % 10) + 1;
+            y = (rand() % 10) + 12;
+            action = takeShot(p2, p1, running, x, y);
+        } while (action == 0);
+        if (action == 2)
+        {
+            opGuess->initX = x;
+            opGuess->initY = y;
+        }
+    }
 }
 
 // perform actions corresponding to user input
 void handleInput(bool *running, bool *started, int *turn, player *p1, player *p2)
 {
     SDL_Event event = getInput();
+    int x, y, action;
+
     switch (event.type)
     {
     case SDL_QUIT:
@@ -157,13 +250,16 @@ void handleInput(bool *running, bool *started, int *turn, player *p1, player *p2
         }
         break;
     case SDL_MOUSEBUTTONDOWN:
+        x = event.motion.x / CELL_SIZE;
+        y = event.motion.y / CELL_SIZE;
         if (*started)
         {
-            if (takeShot(p1, p2, running, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE))
+            action = takeShot(p1, p2, running, x, y);
+            if (action != 0)
                 *turn += 1;
             break;
         }
-        placeSelectedShip(p1, event.motion.x / CELL_SIZE, event.motion.y / CELL_SIZE);
+        placeSelectedShip(p1, x, y);
         break;
     default:
         break;
@@ -171,11 +267,11 @@ void handleInput(bool *running, bool *started, int *turn, player *p1, player *p2
 }
 
 // perform game logic
-int updateGame(bool *running, bool *started, int *turn, player *p1, player *p2)
+int updateGame(bool *running, bool *started, int *turn, player *p1, player *p2, opponentGuess *opGuess)
 {
     if (*turn % 2 == 1)
     {
-        opponentShot(p1, p2, running);
+        opponentShot(p1, p2, running, opGuess);
         *turn += 1;
         return 0;
     }
@@ -194,10 +290,11 @@ int main()
 {
     SDL_Window *window = NULL;
     player p1, p2; // player is p1 and computer/opponent is p2
+    opponentGuess opGuess;
     clock_t start, end;
     double sleepTime;
     int turn = 0;
-    bool running = true, started = false; // testing
+    bool running = true, started = false;
 
     srand(time(NULL)); // initialize random psuedo-random seed
 
@@ -207,23 +304,17 @@ int main()
     initializeShips(&p1);
     initializeShips(&p2);
 
-    initializeOpponent(&p2);
+    initializeOpponent(&p2, &opGuess);
 
     SDL_Renderer *renderer = initializeSDL(window, "Battleship", CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
-
-    // testing
-    SDL_Window *window2 = NULL;
-    SDL_Renderer *renderer2 = initializeSDL(window, "Battleship Opp", CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
-    render(renderer2, &p2);
 
     render(renderer, &p1);
 
     while (running)
     {
         start = clock();
-        updateGame(&running, &started, &turn, &p1, &p2);
+        updateGame(&running, &started, &turn, &p1, &p2, &opGuess);
         render(renderer, &p1);
-        render(renderer2, &p2); // testing
         end = clock();
 
         sleepTime = SKIP_TICKS - ((double)(end - start) / CLOCKS_PER_SEC);
@@ -233,14 +324,20 @@ int main()
     printf("Game Over!\n");
     SDL_Delay(3000);
 
-    // box selection area
-    // keep track of player's hits and misses in opponent grid
-    // keep track of enemy hits in player grid
-    // check each position pointer array after each hit to see if ship sank
-    // mouse motion placement prediction
-    // remove printf statements
+    // testing/final reveal
+    render(renderer, &p2);
+    SDL_Delay(10000);
 
-    /* AI
+    teardown(renderer, window);
+
+    return 0;
+}
+
+// check each position pointer array after each hit to see if ship sank
+// mouse motion placement prediction
+// remove printf statements
+
+/* AI
     select random cell
     hit or miss
     if hit
@@ -249,12 +346,5 @@ int main()
         if miss, select new direction
     if miss
         new random cell
-    */
-
-    //testing
-    teardown(renderer2, window2);
-
-    teardown(renderer, window);
-
-    return 0;
-}
+    keep track of last hit until ship has sank, then reset
+*/

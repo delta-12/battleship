@@ -233,8 +233,37 @@ int setSelectedShip(bool started, player *p, int selectedShip)
 
 /* Shooting
 *********************************************************************/
-void checkSunk()
+// checks opponent's ships to see if sunk
+int checkSunk(player *p, int x, int y)
 {
+    ship *s;
+    bool correctShip, sunk;
+
+    for (int i = 0; i < NSHIPS; i++)
+    {
+        s = &p->ships[i];
+        correctShip = false;
+        sunk = true;
+        if (!s->sunk)
+        {
+            for (int j = 0; j < s->len; j++)
+            {
+                if (*s->pos[j] != 3)
+                    sunk = false;
+                if (s->pos[j] == &p->grid[x][y])
+                {
+                    correctShip = true;
+                }
+            }
+            if (correctShip && sunk)
+            {
+                s->sunk = true;
+                printf("Ship %d sunk!\n", i);
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 int checkGameOver(player *p)
@@ -255,7 +284,7 @@ int takeShot(player *p1, player *p2, bool *running, int x, int y)
 {
     if (x < 11 && x > 0 && y < 22 && y > 11)
     {
-        if (p1->grid[x][y] == 2)
+        if (p1->grid[x][y] == 2 || p1->grid[x][y] == 3)
         {
             printf("Shot taken already!\n");
             return 0;
@@ -273,7 +302,9 @@ int takeShot(player *p1, player *p2, bool *running, int x, int y)
             printf("Hit!\n");
             if (checkGameOver(p2))
                 *running = false;
-            return 1;
+            if (checkSunk(p2, x, y - 11))
+                return 3;
+            return 2;
         }
     }
     return 0;
