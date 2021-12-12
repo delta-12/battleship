@@ -50,6 +50,10 @@ void initializeShips(player *p)
         p->ships[i].sunk = false;                 // no ships sunk yet
         p->ships[i].center = p->ships[i].len / 2; // calculate ship's center point
 
+        // set rectangle dimensions for copying number texture
+        p->ships[i].numberRect.w = 13;
+        p->ships[i].numberRect.h = 25;
+
         // place ships to right of player board
         for (int j = 0; j < p->ships[i].len; j++)
         {

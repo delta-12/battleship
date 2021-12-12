@@ -13,6 +13,7 @@
 void drawBackground(SDL_Renderer *renderer, int r, int g, int b, int a);
 void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a);
 void drawPlayerShips(SDL_Renderer *renderer, player *p);
+void createNumberTextures(SDL_Renderer *renderer, player *p);
 /********************************************************************/
 
 void render(SDL_Renderer *renderer, player *p);

@@ -10,6 +10,7 @@ OBJS = $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SRCS))
 BINS = $(patsubst $(SRC)/%.c, $(BIN)/%, $(SRCS))
 
 all: engine.o rendering.o battleship
+	cp resources/FreeMonoBold.ttf bin/
 
 engine.o: $(SRC)/engine.c $(SRC)/engine.h
 	${CC} ${CFLAGS} -o $(OBJ)/engine.o -c $(SRC)/engine.c

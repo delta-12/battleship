@@ -16,12 +16,11 @@
 // general ship struct
 typedef struct
 {
-    int *pos[5];
-    int len, rot; // rotation- 0 left, 1 up, 2 right, 3 down
-    int *initCenterPos;
-    int center;
-    bool isPlaced;
-    bool sunk;
+    int *pos[5];          // pointers to grid cells occupied by ship
+    int len, center, rot; // rotation- 0 left, 1 up, 2 right, 3 down
+    int *initCenterPos;   // initial position of ship's center
+    bool isPlaced, sunk;
+    SDL_Rect numberRect; // rectangle for rendering texture containing ship's selection number
 } ship;
 
 // general player struct

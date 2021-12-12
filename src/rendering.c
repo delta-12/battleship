@@ -43,14 +43,11 @@ void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a)
 // color in non-zero grid values corresponding to status
 void drawPlayerShips(SDL_Renderer *renderer, player *p)
 {
-    int cellVal;
-
     for (int i = 0; i < BOARD_SIZE_X; i++)
     {
         for (int j = 0; j < BOARD_SIZE_Y; j++)
         {
-            cellVal = p->grid[i][j];
-            switch (cellVal)
+            switch (p->grid[i][j])
             {
             case 1:
                 SDL_SetRenderDrawColor(renderer, 22, 198, 12, 255); // player's ship- green
@@ -69,6 +66,33 @@ void drawPlayerShips(SDL_Renderer *renderer, player *p)
         }
     }
 }
+
+// create texture of each ship's number to display on ship
+void createNumberTextures(SDL_Renderer *renderer, player *p)
+{
+    TTF_Font *font = TTF_OpenFont("FreeMonoBold.ttf", 25); // select font from file
+    SDL_Color color = {255, 255, 255};                     // color text white
+    SDL_Texture *texture;                                  // texture for rendering text
+
+    // surfaces for each ship's text
+    SDL_Surface *surfaces[5] = {
+        TTF_RenderText_Solid(font, "1", color), // ship selection numbers
+        TTF_RenderText_Solid(font, "2", color),
+        TTF_RenderText_Solid(font, "3", color),
+        TTF_RenderText_Solid(font, "4", color),
+        TTF_RenderText_Solid(font, "5", color)};
+
+    for (int i = 0; i < NSHIPS; i++)
+    {
+        texture = SDL_CreateTextureFromSurface(renderer, surfaces[i]);    // create texture from surface w/ number text
+        SDL_RenderCopy(renderer, texture, NULL, &p->ships[i].numberRect); // copy texture to rendering target in ship's numberRect
+        SDL_FreeSurface(surfaces[i]);                                     // free surface's memory after texture created from surface is copied to renderer
+    }
+
+    // free texture memory, close font
+    SDL_DestroyTexture(texture);
+    TTF_CloseFont(font);
+}
 /********************************************************************/
 
 // display objects in window
@@ -81,6 +105,7 @@ void render(SDL_Renderer *renderer, player *p)
     drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
     drawGrids(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
     drawPlayerShips(renderer, p);
+    createNumberTextures(renderer, p);
 
     // render objects
     SDL_RenderPresent(renderer);

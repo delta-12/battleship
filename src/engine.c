@@ -83,6 +83,16 @@ int getRotation(int rotation)
     }
 }
 
+// calculate the x and y position on grid from given position on grid
+void calculateOffset(player *p, int *pos, int *x, int *y)
+{
+    int offset;
+
+    offset = pos - &p->grid[0][0];
+    *x = offset / BOARD_SIZE_Y;
+    *y = offset % BOARD_SIZE_Y;
+}
+
 // check if cells are occupied by another ship
 bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
 {
@@ -113,8 +123,7 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
         if (placing)
         {
             // calculate new position
-            newXPos = (newPos - &p->grid[0][0]) / BOARD_SIZE_Y;
-            newYPos = (newPos - &p->grid[0][0]) % BOARD_SIZE_Y;
+            calculateOffset(p, newPos, &newXPos, &newYPos);
 
             // ship must be placed within 10 x 10 board
             if (newXPos > 10 || newXPos < 1 || newYPos > 10 || newYPos < 1)
@@ -158,7 +167,7 @@ void rotateShip(player *p, int rotation)
 void placeShips(player *p)
 {
     ship *s;
-    int rot;
+    int rot, x, y;
 
     for (int i = 0; i < NSHIPS; i++)
     {
@@ -179,6 +188,11 @@ void placeShips(player *p)
             s->pos[j] = s->pos[s->center] - ((s->center - j) * rot); // calculate offset from center for each block based on rotation
             *s->pos[j] = 1;
         }
+
+        // update position of texture rectangle
+        calculateOffset(p, s->pos[0], &x, &y);
+        s->numberRect.x = x * CELL_SIZE + 2;
+        s->numberRect.y = y * CELL_SIZE + 2;
     }
 }
 
