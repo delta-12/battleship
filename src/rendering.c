@@ -40,6 +40,7 @@ void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a)
     SDL_RenderDrawLine(renderer, 18 * CELL_SIZE + 1, CELL_SIZE + 1, 18 * CELL_SIZE + 1, 6 * CELL_SIZE + 1);     // right
 }
 
+// color in non-zero grid values corresponding to status
 void drawPlayerShips(SDL_Renderer *renderer, player *p)
 {
     int cellVal;
@@ -73,12 +74,15 @@ void drawPlayerShips(SDL_Renderer *renderer, player *p)
 // display objects in window
 void render(SDL_Renderer *renderer, player *p)
 {
-    SDL_Color gridBackground = {22, 22, 22, 255}; // Barely Black
-    SDL_Color gridLineColor = {44, 44, 44, 255};  // Dark grey
+    SDL_Color gridBackground = {22, 22, 22, 255}; // almost black
+    SDL_Color gridLineColor = {44, 44, 44, 255};  // dark grey
 
+    // draw objects
     drawBackground(renderer, gridBackground.r, gridBackground.g, gridBackground.b, gridBackground.a);
     drawGrids(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
     drawPlayerShips(renderer, p);
+
+    // render objects
     SDL_RenderPresent(renderer);
     SDL_RenderClear(renderer);
 }

@@ -12,7 +12,7 @@ Simple implementation of the classic Battleship game in C using the SDL library.
 
 1. Install `gcc`, `make`, and SDL library
 
-`sudo apt install -y gcc make libsdl2-2.0-0 libsdl2-dev libsdl2-image-2.0-0 libsdl2-image-dbg libsdl2-image-dev`
+`sudo apt install -y gcc make libsdl2-2.0-0 libsdl2-dev libsdl2-image-2.0-0 libsdl2-image-dev libsdl2-ttf-dev`
 
 2. Clone repository
 
