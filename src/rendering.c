@@ -38,6 +38,9 @@ void drawGrids(SDL_Renderer *renderer, int r, int g, int b, int a)
     SDL_RenderDrawLine(renderer, 13 * CELL_SIZE + 1, 6 * CELL_SIZE + 1, 18 * CELL_SIZE + 1, 6 * CELL_SIZE + 1); // bottom
     SDL_RenderDrawLine(renderer, 13 * CELL_SIZE + 1, CELL_SIZE + 1, 13 * CELL_SIZE + 1, 6 * CELL_SIZE + 1);     // left
     SDL_RenderDrawLine(renderer, 18 * CELL_SIZE + 1, CELL_SIZE + 1, 18 * CELL_SIZE + 1, 6 * CELL_SIZE + 1);     // right
+
+    // message box
+    SDL_RenderDrawLine(renderer, 0, CELL_SIZE * BOARD_SIZE_Y + 1, CELL_SIZE * BOARD_SIZE_X + 1, CELL_SIZE * BOARD_SIZE_Y + 1);
 }
 
 // color in non-zero grid values corresponding to status
@@ -93,6 +96,31 @@ void createNumberTextures(SDL_Renderer *renderer, player *p)
     SDL_DestroyTexture(texture);
     TTF_CloseFont(font);
 }
+
+// displays player's messages at bottom of window
+void displayMessage(SDL_Renderer *renderer, player *p)
+{
+    TTF_Font *font = TTF_OpenFont("FreeMonoBold.ttf", 25);                     // select font from file
+    SDL_Color color = {255, 255, 255};                                         // color text white
+    SDL_Surface *surface = TTF_RenderText_Solid(font, message(p->msg), color); // surface for message text
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);    // texture for rendering text
+
+    // determine size of rectangle
+    const char *msg = message(p->msg);
+    int len = (p->msg == 5 || p->msg == 6) ? 5 * 13 : (sizeof(msg) / sizeof(msg[0]) - 1) * 30;
+
+    // area of rendering to display message
+    // centered using msg len
+    SDL_Rect msgRect = {((CELL_SIZE * BOARD_SIZE_X + 1) / 2) - len / 2, CELL_SIZE * (BOARD_SIZE_Y + 1) + 1, len, 25};
+
+    // copy texture to message box area in rendering
+    SDL_RenderCopy(renderer, texture, NULL, &msgRect);
+
+    // free texture and surface memory, close font
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(surface);
+    TTF_CloseFont(font);
+}
 /********************************************************************/
 
 // display objects in window
@@ -106,6 +134,7 @@ void render(SDL_Renderer *renderer, player *p)
     drawGrids(renderer, gridLineColor.r, gridLineColor.g, gridLineColor.b, gridLineColor.a);
     drawPlayerShips(renderer, p);
     createNumberTextures(renderer, p);
+    displayMessage(renderer, p);
 
     // render objects
     SDL_RenderPresent(renderer);

@@ -61,6 +61,52 @@ SDL_Event getInput()
         return event;
 }
 
+// return selected message
+const char *message(int msg)
+{
+    switch (msg)
+    {
+    case 0:
+        return "Game started! Your turn...";
+    case 1:
+        return "Place all ships to start game!";
+    case 2:
+        return "Can't select ship!";
+    case 3:
+        return "Can't place ship!";
+    case 4:
+        return "Shot already taken!";
+    case 5:
+        return "Miss!";
+    case 6:
+        return "Hit!";
+    case 7:
+        return "Opponent's Ship sunk!";
+    case 8:
+        return "Game Over!";
+    case 9:
+        return "Opponent Sank Your Ship!";
+    case 10:
+        return "Your turn...";
+    case 11:
+        return "Opponent's turn...";
+    case 12:
+        return "Place your ships...";
+    case 13:
+        return "Opponent's Board";
+    case 14:
+        return "Opponent Hit Your Ship!";
+    case 15:
+        return "Opponent Missed!";
+    case 16:
+        return "You won!";
+    case 17:
+        return "You lost!";
+    default:
+        return 0;
+    }
+}
+
 /* Game Mechanics
 **********************************************************************
 *********************************************************************/
@@ -104,17 +150,15 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
     {
         if (p->grid[*x][*y] == 1 && s->pos[s->center] != &p->grid[*x][*y])
         {
-            printf("Can't place center!\n");
+            p->msg = 3; // can't place ship msg
+            p->pause = true;
             return false;
         }
         newCenter = &p->grid[*x][*y]; // if cell is clear, set new center equal to pointer to new cell
     }
 
     // apply rotation if necessary
-    if (rotation != NULL)
-        rot = getRotation(*rotation);
-    else
-        rot = getRotation(s->rot);
+    rot = (rotation != NULL) ? getRotation(*rotation) : getRotation(s->rot);
 
     // check if rest of ship can be moved
     for (int i = 0; i < s->len; i++)
@@ -128,7 +172,8 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
             // ship must be placed within 10 x 10 board
             if (newXPos > 10 || newXPos < 1 || newYPos > 10 || newYPos < 1)
             {
-                printf("Can't place ship!\n");
+                p->msg = 3; // can't place ship msg
+                p->pause = true;
                 return false;
             }
         }
@@ -136,7 +181,8 @@ bool checkCells(player *p, int *x, int *y, int *rotation, int placing)
         // center if cells are clear
         if (s->pos[i] != newCenter && *newPos == 1)
         {
-            printf("Can't place ship!\n");
+            p->msg = 3; // can't place ship msg
+            p->pause = true;
             return false;
         }
     }
@@ -232,7 +278,8 @@ int placeSelectedShip(player *p, int x, int y)
                 s->isPlaced = true;                 // ship is now placed on board
                 return 0;
             }
-        printf("Can't place selected ship!\n");
+        p->msg = 3; // can't place ship msg
+        p->pause = true;
         return 1;
     }
     return 0;
@@ -261,8 +308,9 @@ int setSelectedShip(bool started, player *p, int selectedShip)
             s->pos[s->center] = &p->grid[x][y]; // move center to selected ship box
             return 0;
         }
+        p->msg = 2; // can't select ship msg
+        p->pause = true;
     }
-    printf("Can't select ship!\n");
     return 1;
 }
 /********************************************************************/
@@ -270,7 +318,7 @@ int setSelectedShip(bool started, player *p, int selectedShip)
 /* Shooting
 *********************************************************************/
 // checks opponent's ships to see if sunk
-int checkSunk(player *p, int x, int y)
+int checkSunk(player *p2, player *p1, int x, int y)
 {
     ship *s;
     bool correctShip, sunk;
@@ -279,7 +327,7 @@ int checkSunk(player *p, int x, int y)
     // and is sunk
     for (int i = 0; i < NSHIPS; i++)
     {
-        s = &p->ships[i];
+        s = &p2->ships[i];
         correctShip = false;
         sunk = true;
         if (!s->sunk)
@@ -291,7 +339,7 @@ int checkSunk(player *p, int x, int y)
                     sunk = false;
 
                 // the ship must contain the position of the hit
-                if (s->pos[j] == &p->grid[x][y])
+                if (s->pos[j] == &p2->grid[x][y])
                 {
                     correctShip = true;
                 }
@@ -299,7 +347,13 @@ int checkSunk(player *p, int x, int y)
             if (correctShip && sunk)
             {
                 s->sunk = true;
-                printf("Ship %d sunk!\n", i);
+
+                // ship sunk msg
+                p1->msg = 7;
+                p2->msg = 9;
+                p1->pause = true;
+                p2->pause = true;
+
                 return 1;
             }
         }
@@ -330,7 +384,9 @@ int takeShot(player *p1, player *p2, bool *running, int x, int y)
         // check is player already took shot with matching position
         if (p1->grid[x][y] == 2 || p1->grid[x][y] == 3)
         {
-            printf("Shot taken already!\n");
+            p1->msg = 4; // shot taken already msg
+            p1->pause = true;
+            p2->pause = true;
             return 0;
         }
 
@@ -338,7 +394,10 @@ int takeShot(player *p1, player *p2, bool *running, int x, int y)
         if (p2->grid[x][y - 11] == 0)
         {
             p1->grid[x][y] = 2;
-            printf("Miss!\n");
+            p1->msg = 5; // miss msg
+            p2->msg = 15;
+            p1->pause = true;
+            p2->pause = true;
             return 1;
         }
 
@@ -347,8 +406,11 @@ int takeShot(player *p1, player *p2, bool *running, int x, int y)
         {
             p1->grid[x][y] = 3;
             p2->grid[x][y - 11] = 3;
-            printf("Hit!\n");
-            if (checkSunk(p2, x, y - 11)) // check is ship was sunk
+            p1->msg = 6; // hit msg
+            p2->msg = 14;
+            p1->pause = true;
+            p2->pause = true;
+            if (checkSunk(p2, p1, x, y - 11)) // check is ship was sunk
             {
                 if (checkGameOver(p2)) // check if game over if ship was sunk
                     *running = false;

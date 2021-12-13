@@ -1,0 +1,31 @@
+Welcome to Battleship!
+
+Objective: Sink all of your opponent's ships.
+
+In this game, you will play against the computer to see who can sink all of each other's ships first.
+
+1. Placing ships
+The first step is to place all of your ships on the top grid.  This can be done by pressing the number key that corresponds to the number on the ship, using the arrow keys to rotate the ship to desired orientation, and then clicking the cell in the top grid that you want to place the center of the ship in.
+Ships must be placed completely within the top grid.  If the cell at which the center of ship is to be placed causes the ship to overhang the edge of the top grid, then a message will be displayed, alerting you that you cannot place the ship there.
+Each ship has a given length corresponding to the number of cells it fills.
+    1. Aircraft Carrier - 5 cells
+    2. Cruiser - 4 cells
+    3. Destroyer - 3 cells
+    4. Submarine - 3 cells
+    5. Patrol Boat - 2 cells
+The location of a ship on the grid is the cells it fills when placed.  The ships are colored in green.
+All of your ships combined comprise your fleet.
+Your bottom grid corresponds to your opponent's top grid, where its ships are placed, and vice versa.
+
+2. Playing the game
+When all of your ships have been placed, press the 's' key to start the game.
+You and your computer opponent will alternate taking "shots" at each other's ships.  The idea is that you are taking shooting at an enemy battleships, trying to sink them.  Each shot is guess at the location of your opponent's ships.  If the location of a shot matches a cell filled by one of your opponent's ships, then it is said to be a "hit".  If not, is a "miss".
+To take a shot, click on a cell in the bottom grid that you think is filled by one of your opponent's ships.  If it is a hit, it will be marked in red.  If it is a miss, it will be marked in white.  Your opponent's hits on your ships will also be marked in red on your top grid.
+When all the cells filled by a ship have been hit, or in other words, when an entire ship's location has been guessed, the ship is said to be sunk.  A message at the bottom of the screen will indicate if a ship has been sunk after the final shot needed to sink the ship was taken.
+When it is your turn, you will shoot at your opponent's ships.  Then, it is your opponent's turn, and it will do the same.  This process repeats until the game is over.
+
+3. Winning the game
+The game is over after a player's fleet, i.e. all of a player's ships, have been sunk.  The winner is whoever is able to sink the other player's fleet first.
+Your computer opponent's board will also be revealed at the end of the game.
+
+Best of luck!

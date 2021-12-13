@@ -29,14 +29,23 @@ typedef struct
     // player's boards
     int grid[BOARD_SIZE_X][BOARD_SIZE_Y];
 
+    // number of message to display in message box
+    int msg;
+
+    // set true to display message and delay game update for 99 frames
+    bool pause;
+
     // player's ships
     ship ships[NSHIPS];
     int selectedShip;
 } player;
 
+// SDL abstractions
 SDL_Renderer *initializeSDL(SDL_Window *window, const char *title, int width, int height);
 void teardown(SDL_Renderer *renderer, SDL_Window *window);
 SDL_Event getInput();
+
+const char *message(int msg);
 
 /* Game Mechanics
 **********************************************************************
@@ -55,7 +64,7 @@ int setSelectedShip(bool started, player *p, int selectedShip);
 
 /* Shooting
 *********************************************************************/
-int checkSunk(player *p, int x, int y);
+int checkSunk(player *p2, player *p1, int x, int y);
 int checkGameOver(player *p);
 int takeShot(player *p1, player *p2, bool *running, int x, int y);
 /********************************************************************/
